@@ -1,0 +1,63 @@
+name: Build NIM Game (Win, Mac, Linux)
+
+# Kích hoạt action khi có code mới đẩy lên nhánh main hoặc tự bấm chạy tay
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    # Dùng matrix để chạy đồng thời trên 3 hệ điều hành
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      # 1. Lấy mã nguồn từ GitHub về máy chủ ảo
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Cài đặt môi trường Java (ở đây dùng JDK 21, bạn có thể đổi thành 17 nếu đang dùng Java 17)
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # 3. Build ra file .jar bằng Maven
+      - name: Build with Maven
+        run: mvn clean package
+
+      # 4. Tạo custom-jre bằng jlink (Bắt buộc phải có bước này vì jpackage cần)
+      - name: Create Custom JRE
+        run: |
+          jlink --add-modules java.base,java.desktop,java.logging --output custom-jre --strip-debug --no-man-pages --no-header-files
+
+      # 5. Đóng gói cho Windows
+      - name: Package for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          jpackage --type app-image --name "NIM_Game" --input target/ --main-jar NIM_game-1.0.jar --main-class com.nim.view.Main --runtime-image custom-jre --icon src/main/resources/view/gameview/icon.ico --dest output
+
+      # 6. Đóng gói cho macOS
+      - name: Package for macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          jpackage --type app-image --name "NIM_Game" --input target/ --main-jar NIM_game-1.0.jar --main-class com.nim.view.Main --runtime-image custom-jre --icon src/main/resources/view/gameview/icon.icns --dest output
+
+      # 7. Đóng gói cho Linux
+      - name: Package for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          jpackage --type app-image --name "NIM_Game" --input target/ --main-jar NIM_game-1.0.jar --main-class com.nim.view.Main --runtime-image custom-jre --icon src/main/resources/view/gameview/icon.png --dest output
+
+      # 8. Upload kết quả lên GitHub để bạn tải về
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NIM_Game-${{ matrix.os }}
+          path: output/
