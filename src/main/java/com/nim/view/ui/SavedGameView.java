@@ -157,6 +157,7 @@ public class SavedGameView extends JPanel {
         // ----- Trạng thái và nút bên phải -----
         JPanel rightPanel = new JPanel(new BorderLayout(0, 10));
         rightPanel.setOpaque(false);
+        rightPanel.setPreferredSize(new Dimension(100,175));
 
         JLabel statusLabel = new JLabel(canContinue ? "● Có thể tiếp tục" : "● Đã kết thúc");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
